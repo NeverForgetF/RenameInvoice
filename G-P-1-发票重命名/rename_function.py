@@ -8,7 +8,8 @@ import shutil
 import pdfplumber
 import hashlib
 import uuid
-from chat_ai_rename import InvoiceExtractor
+from chat_ai_rename import InvoiceExtractor, ImageOcrExtractor
+
 
 def get_backup_dir(pdf_dir):
     parent_dir = os.path.dirname(pdf_dir.rstrip(os.sep))
@@ -184,7 +185,8 @@ def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
     text_area.insert(tk.END, f"备份目录为：{bak_dir}\n")
     text_area.see(tk.END)
 
-    ai_extractor = InvoiceExtractor(model_name=os.environ.get("MODEL_NAME"), model_name_vision=os.environ.get("MODEL_NAME_VISION"))
+    ai_extractor = InvoiceExtractor(model_name=os.environ.get("MODEL_NAME"))
+    ocr_extractor = ImageOcrExtractor()
     count = 0
     # 文件备份
     for filename in os.listdir(pdf_dir):
@@ -224,9 +226,8 @@ def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
             # 不是pdf，就走图片识别
             text_area.insert(tk.END, "\n图片识别发票中，请稍候...")
             text_area.see(tk.END)
-            # full_text = ocr_extractor.get_rename_by_ocr(file_path)
-            # new_name_base = ai_extractor.get_rename_by_chat_ai(full_text, fields, split)
-            new_name_base = ai_extractor.get_rename_by_vision_ai(file_path, fields, split)
+            full_text = ocr_extractor.extract_from_path(file_path)
+            new_name_base = ai_extractor.get_rename_by_chat_ai(full_text, fields, split)
 
         # 如果 new_name_base 有两个 __ ，说明没有识别成功
         # 直接把文本扔给ai识别

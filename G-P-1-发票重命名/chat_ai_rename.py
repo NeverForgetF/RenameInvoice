@@ -50,8 +50,7 @@ class InvoiceExtractor:
 
     def __init__(
             self,
-            model_name: str = 'glm-4.5-air',
-            model_name_vision: str = 'glm-4v',
+            model_name: str = 'moonshot-v1-8k',
             api_key: str = None,
             temperature: float = 0.0
         ):
@@ -68,11 +67,20 @@ class InvoiceExtractor:
 
         # 初始化模型和提示
         self.model = ChatOpenAI(model_name=model_name, temperature=temperature)
-        self.model_vision = ChatOpenAI(model_name=model_name_vision, temperature=temperature)
 
         self.prompt = ChatPromptTemplate.from_messages([
             ("system",
-             "你是一个专业的发票信息提取算法。请仅从用户提供的发票文本中提取相关信息，并填充到预定义的JSON结构中。如果某个字段的值在文本中找不到，请不要编造，让该字段的值为null。"),
+             "你是一个专业的发票信息提取算法。请仅从用户提供的发票文本中提取相关信息，"
+             "并填充到预定义的JSON结构中。如果某个字段的值在文本中找不到，请不要编造，"
+             "让该字段的值为null。"
+             "如果遇到 下面这样的"
+             "'名称：武汉东湖学院"
+             " 名称：中国移动通信集团湖北有限公司武汉分公司"
+             " 一社会信用代码/纳税人识别号：52420000123406283N"
+             " 一社会信用代码/纳税人识别号：91420100717918134N'"
+             "切记 购方税号 和 销方税号是按照 单位名称顺序对应"
+             "即：武汉东湖学院-52420000123406283N"
+             ),
             ("human", "{invoice_text}")
         ])
 
@@ -80,18 +88,7 @@ class InvoiceExtractor:
         # 注意：根据之前的讨论，如果模型不支持 json_schema，需要显式指定 method="function_calling"
         # 对于 moonshot 和 deepseek，通常需要这样做。
         self.extraction_chain = self.prompt | self.model.with_structured_output(InvoiceInfo, method="function_calling")
-    def get_message(self, base64_image):
-        return HumanMessage(
-        content=[
-            {"type": "text", "text": "请详细描述这张发票图片的内容，并提取所有关键信息。"},
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                }
-            }
-        ]
-    )
+
     def extract(self, invoice_text: str) -> Dict[str, Optional[str]]:
         """
         从给定的发票文本中提取信息，包含自动重试逻辑。
@@ -131,45 +128,6 @@ class InvoiceExtractor:
         # 理论上不会执行到这里，但为了代码完整性
         return {key: None for key in InvoiceInfo.model_fields.keys()}
 
-    def extract_from_image(self, image_path: str) -> Dict[str, Optional[str]]:
-        """
-        从发票图片中提取结构化信息，使用多模态大模型（如 glm-4.5v）。
-        :param image_path: 发票图片的路径。
-        :return: 一个字典，包含提取的字段和值。如果字段未找到，值为 None。
-        """
-        max_retries = 3
-        initial_wait = 60
-        retries = 0
-        wait_time = initial_wait
-        with open(image_path, "rb") as image_file:
-            base64_image = base64.b64encode(image_file.read()).decode('utf-8')
-
-        while retries <= max_retries:
-            try:
-                print(f"base64_image: {base64_image}")
-                message = self.get_message(base64_image)
-                # 这里识别图片只能用 model_vision 不能走 结构化数据返回
-                # TODO 既然无法使用结构化，那么只能使用之前的规则命名返回了
-                extracted_info = self.model_vision.invoke([message])
-                print(f"extracted_info: {extracted_info}")
-                return extracted_info.model_dump()
-
-            except RateLimitError as e:
-                retries += 1
-                if retries > max_retries:
-                    print(f"❌ 达到最大重试次数 {max_retries}，放弃重试。最终错误：{e}")
-                    return {key: None for key in InvoiceInfo.model_fields.keys()}
-
-                print(f"⚠️ API 速率限制 (429)，将在 {wait_time} 秒后进行第 {retries} 次重试...")
-                time.sleep(wait_time)
-                wait_time *= 1.5
-
-            except Exception as e:
-                print(f"❌ 处理过程中发生非速率限制错误：{e}")
-                return {key: None for key in InvoiceInfo.model_fields.keys()}
-
-        return {key: None for key in InvoiceInfo.model_fields.keys()}
-
     # --- 新增函数 ---
     def format_by_fields(self, extracted_data: Dict[str, Optional[str]], fields: list[str]) -> Dict[str, Optional[str]]:
         """
@@ -206,19 +164,7 @@ class InvoiceExtractor:
         # 3. 改成文件命名
         return split.join(formatted_data.values())
 
-    # 调用ai方法 图片专用
-    def get_rename_by_vision_ai(self, image_path, fields, split):
-        # 1. 先提取所有信息
-        full_data_dict = self.extract_from_image(image_path)
-        print(full_data_dict)
-        # 2. 调用新函数，按需格式化
-        formatted_data = self.format_by_fields(full_data_dict, fields)
-        time.sleep(random.randint(1, 3))
-        # 3. 改成文件命名
-        return split.join(formatted_data.values())
-
-
-######################### 下面是用ocr识别图片，不太准，改成上面ai识别 #########################
+######################### 下面是用ocr识别图片，不太准 #########################
 from typing import Union, List
 import numpy as np
 from PIL import Image
@@ -303,16 +249,3 @@ class ImageOcrExtractor:
                 image_text += "\n\n"  # 在不同页面之间添加分隔
 
         return image_text
-
-    # 返回图片文本
-    def get_rename_by_ocr(self, image_path):
-        # 1. 创建OCR提取器实例（只需创建一次，模型会自动加载）
-        ocr_extractor = ImageOcrExtractor()
-        return ocr_extractor.extract_from_path(image_path)
-
-if __name__ == '__main__':
-    file_path = r'E:\其他\大学生创新创业\创新创业\rename_c12f7139\25372000000053312804_2025年03月01日_武汉东湖学院_91370103575574929C_济南凝思图文制作有限公司_52420000753406283N_18.79_0_18.79_壹拾捌圆柒角玖分_杨斌.jpg'
-    ai_extractor = InvoiceExtractor(model_name=os.environ.get("MODEL_NAME"),
-                                    model_name_vision=os.environ.get("MODEL_NAME_VISION"))
-    name = ai_extractor.get_rename_by_vision_ai(file_path, ['发票号码', '开票日期', '购方名称', '销方名称'], '_')
-    print(name)
