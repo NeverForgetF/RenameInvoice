@@ -185,7 +185,7 @@ def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
     text_area.insert(tk.END, f"备份目录为：{bak_dir}\n")
     text_area.see(tk.END)
 
-    ai_extractor = InvoiceExtractor(model_name=os.environ.get("MODEL_NAME"))
+    ai_extractor = InvoiceExtractor(model_name=os.environ.get("MODEL_NAME", 'moonshot-v1-8k'))
     ocr_extractor = ImageOcrExtractor()
     count = 0
     # 文件备份

@@ -34,11 +34,13 @@ def test_ocr2ai():
    run_main_ui_local(cfg)
 
 if __name__ == '__main__':
-   # 1. 测试ocr识别图片 ai 再识别为结构化数据
-   print("1. 测试ocr识别图片 ai 再识别为结构化数据")
-   test_ocr2ai()
 
+   # 1. 测试ocr识别图片 转成文本格式
    # OCR = ImageOcrExtractor()
    # path = r'E:\其他\大学生创新创业\创新创业\rename_c12f7139\25372000000053312804_2025年03月01日_武汉东湖学院_91370103575574929C_济南凝思图文制作有限公司_52420000753406283N_18.79_0_18.79_壹拾捌圆柒角玖分_杨斌.pdf'
    # text = OCR.extract_from_path(path)
    # print(text)
+
+   # 2. 测试ocr识别图片 ai 再识别为结构化数据
+   print("1. 测试ocr识别图片 ai 再识别为结构化数据")
+   test_ocr2ai()
