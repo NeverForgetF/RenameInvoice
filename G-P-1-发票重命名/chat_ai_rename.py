@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 # 这个模型定义了我们希望从发票中提取的所有信息结构
 class InvoiceInfo(BaseModel):
     """从发票中提取的结构化信息模型"""
-    invoice_number: Optional[str] = Field(default=None, description="发票上的唯一号码（如：2511700000248076035）")
+    invoice_number: Optional[str] = Field(default=None, description="发票上的唯一号码（如：2511700000321326035）")
     issue_date: Optional[str] = Field(default=None, description="发票开票日期，格式为YYYY年MM月DD日（如：2025年02月27日）")
     buyer_name: Optional[str] = Field(default=None, description="购买方公司名称（如：武汉东湖学院）")
     buyer_tax_id: Optional[str] = Field(default=None, description="购买方统一社会信用代码/纳税人识别号")

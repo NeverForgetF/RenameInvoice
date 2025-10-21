@@ -1,6 +1,7 @@
+import os
 import requests
 # DeepSeek API配置
-api_key = "sk-eea5b24ca8fb4d75a46fe9e3453deedd"
+api_key = os.getenv('API_KEY')
 base_url = "https://chat.deepseek.com/api/v0/file/upload_file"
 # 打开本地MP4文件
 file_path = "content/25427000000411948251_2025年09月24日_武汉东湖学院_武汉京东世纪贸易有限公司.txt"
