@@ -1,0 +1,29 @@
+# --- 敏感信息 ---
+# 忽略所有名为 .env 的文件
+.env
+
+# --- Python ---
+# 忽略Python字节码文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+db/
+# 忽略虚拟环境目录
+venv/
+.venv/
+env/
+test/
+# 忽略IDE或编辑器的配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 忽略日志文件
+*.log
+
+# 忽略分发 / 打包
+/build/
+/dist/
+*.egg-info/
