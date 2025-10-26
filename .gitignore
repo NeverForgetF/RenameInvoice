@@ -24,6 +24,7 @@ test/
 *.log
 
 # 忽略分发 / 打包
-/build/
-/dist/
+*/build/
+*/dist/
 *.egg-info/
+*/发票重命名.spec

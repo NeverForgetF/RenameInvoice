@@ -1,8 +1,6 @@
 # from datetime import datetime
-# from tkinter import messagebox
-#
-# from PIL._tkinter_finder import tk
-#
+from tkinter import messagebox
+import tkinter as tk
 # def valid_date():
 #     expire_str = "2030-08-14"
 #     now = datetime.now()
@@ -16,27 +14,25 @@
 #         return
 import json
 import os
-from pathlib import Path
+import sys
 
 from invoice_rename_config import FieldSelector, fields
 from rename_function import run_main_ui_local
 
 def load_config_to_environ(config_file: str = "config.json") -> None:
+    """读 config.json；找不到就弹窗并退出。"""
+    if not os.path.isfile(config_file):
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showwarning("启动失败", f"找不到 {config_file}，请把配置文件放在程序同目录！")
+        root.destroy()
+        sys.exit(1)
+
     """
     将 config.json 中的 MODEL_NAME / OPENAI_API_BASE / OPENAI_API_KEY
     加载到当前进程的 os.environ 中（仅本次运行有效，不会写系统注册表）。
     """
-    # 1. 定位文件：优先当前脚本所在目录，其次当前工作目录
-    base_dir = Path(__file__).resolve().parent      # 脚本所在目录
-    cfg_path = base_dir / config_file
-    if not cfg_path.is_file():
-        cfg_path = Path(config_file)                # 回退到工作目录
-
-    if not cfg_path.is_file():
-        raise FileNotFoundError(f"找不到配置文件 {config_file}")
-
-    # 2. 读取 json
-    with cfg_path.open(encoding="utf-8") as f:
+    with open(config_file, encoding='utf-8') as f:
         cfg = json.load(f)
 
     if (cfg.get("JSON_ENVIRON") is False
@@ -51,7 +47,8 @@ def load_config_to_environ(config_file: str = "config.json") -> None:
             os.environ[key] = str(value)
 
 def start_config():
-
+    # 存放json配置的路径
+    load_config_to_environ()
     def on_config_confirm(cfg):
         run_main_ui_local(cfg)
 
@@ -60,6 +57,4 @@ def start_config():
 
 
 if __name__ == "__main__":
-    # 存放json配置的路径
-    load_config_to_environ('../test/config.json')
     start_config()

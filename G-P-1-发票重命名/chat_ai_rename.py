@@ -1,10 +1,8 @@
-import base64
 import os
 import random
 import time
 from typing import Optional, Dict
 
-from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from openai import RateLimitError
