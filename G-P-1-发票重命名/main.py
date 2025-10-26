@@ -48,7 +48,7 @@ def load_config_to_environ(config_file: str = "config.json") -> None:
 
 def start_config():
     # 存放json配置的路径
-    load_config_to_environ()
+    # load_config_to_environ()    # 用.env 可以注释这行
     def on_config_confirm(cfg):
         run_main_ui_local(cfg)
 
