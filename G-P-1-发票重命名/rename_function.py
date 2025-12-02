@@ -229,7 +229,7 @@ def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
             full_text = ocr_extractor.extract_from_path(file_path)
             new_name_base = ai_extractor.get_rename_by_chat_ai(full_text, fields, split)
 
-        # 如果 new_name_base 有两个 __ ，说明没有识别成功
+        # 如果 new_name_base 有两个 __ ，说明图片识别没有成功
         # 直接把文本扔给ai识别
         if '__' in new_name_base:
             text_area.insert(tk.END, "\nAI处理发票中，请稍候...")
