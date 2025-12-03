@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
 import threading
@@ -163,19 +164,30 @@ def extract_fields_from_text(text, fields):
     return results
 
 # 提取pdf文本
+import pdfplumber
 def get_full_text(text_area, file_path):
+    """
+    从 PDF 文件中提取文本内容。
+    如果提取失败或文件打不开，返回 None，并在 text_area 显示错误信息。
+    """
     try:
         with pdfplumber.open(file_path) as pdf:
             full_text = ""
             for page in pdf.pages:
                 page_text = page.extract_text()
-                if page_text:
+                if page_text:  # 如果页面提取到文本
                     full_text += page_text + "\n"
+            # 如果整个文档没有提取到任何文本，返回 None
+            if not full_text.strip():
+                text_area.insert(tk.END, "PDF 中未提取到有效文本。\n")
+                text_area.see(tk.END)
+                return None
     except Exception as e:
         text_area.insert(tk.END, f"打开PDF失败: {e}\n")
         text_area.see(tk.END)
-        return False
+        return None
     return full_text
+
 
 def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
     text_area.insert(tk.END, f"开始处理目录：{pdf_dir}\n")
@@ -197,41 +209,29 @@ def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
     text_area.insert(tk.END, f"已备份{count}个PDF文件到：{bak_dir}\n")
     text_area.see(tk.END)
 
-    total = 0
-    success_count = 0
-    full_text = ''
+    total = 0   # 总数
+    success_count = 0   # 处理成功总数
+    filename_same_count = 0     # 文件名冲突数
     for filename in os.listdir(bak_dir):
         total += 1
         file_path = os.path.join(bak_dir, filename)
         text_area.insert(tk.END, f"\n处理文件：{filename}\n")
         text_area.see(tk.END)
-        if filename.lower().endswith('.pdf'):
-            full_text = get_full_text(text_area, file_path)
-            if full_text is False:
-                continue
-            field_values = extract_fields_from_text(full_text, fields)
-
-            if not any(field_values.values()):
-                text_area.insert(tk.END, "未提取到有效字段，跳过重命名\n")
-                text_area.see(tk.END)
-                continue
-
-            parts = []
-            for key in fields:
-                val = field_values.get(key, "")
-                parts.append(val)
+        full_text = get_full_text(text_area, file_path)
+        field_values = extract_fields_from_text(full_text, fields) if full_text is not None else None
+        if filename.lower().endswith('.pdf') and full_text is not None and any(field_values.values()):
+            parts = [field_values.get(key, "") for key in fields]
             new_name_base = split.join(parts)
-
         else:
             # 不是pdf，就走图片识别
-            text_area.insert(tk.END, "\n图片识别发票中，请稍候...")
+            text_area.insert(tk.END, "\n未提取到有效字段，图片识别发票中，请稍候...")
             text_area.see(tk.END)
             full_text = ocr_extractor.extract_from_path(file_path)
             new_name_base = ai_extractor.get_rename_by_chat_ai(full_text, fields, split)
 
         # 如果 new_name_base 有两个 __ ，说明图片识别没有成功
         # 直接把文本扔给ai识别
-        if '__' in new_name_base:
+        if '__' in new_name_base or new_name_base[0] == '_' or new_name_base[-1] == '_':
             text_area.insert(tk.END, "\nAI处理发票中，请稍候...")
             text_area.see(tk.END)
             new_name_base = ai_extractor.get_rename_by_chat_ai(full_text, fields, split)
@@ -241,9 +241,10 @@ def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
         new_name = sanitize_filename(new_name_base) + original_ext
         new_path = os.path.join(bak_dir, new_name)
         if os.path.exists(new_path):
-            text_area.insert(tk.END, f"文件名冲突，跳过: {new_name}\n")
+            filename_same_count += 1
+            text_area.insert(tk.END, f"文件名冲突，加个随机数: {new_name}\n")
             text_area.see(tk.END)
-            continue
+            new_path = sanitize_filename(new_name_base) + time.strftime("%Y%m%d%H%M%S") + original_ext
 
         try:
             os.rename(file_path, new_path)
@@ -256,7 +257,7 @@ def process_files_local(text_area, pdf_dir, fields, split, rename_rule):
 
     text_area.insert(tk.END, f"\n全部处理完成。共处理{total}个PDF，成功重命名{success_count}个。\n")
     text_area.see(tk.END)
-    messagebox.showinfo("处理完成", f"全部处理完成。共处理{total}个PDF，成功重命名{success_count}个。")
+    messagebox.showinfo("处理完成", f"全部处理完成。共处理{total}个PDF，成功重命名{success_count}个，其中文件名冲突{filename_same_count}个。")
 
 def run_main_ui_local(cfg):
     root = tk.Tk()

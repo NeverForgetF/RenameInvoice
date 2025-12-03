@@ -1,6 +1,3 @@
-# from datetime import datetime
-from tkinter import messagebox
-import tkinter as tk
 # def valid_date():
 #     expire_str = "2030-08-14"
 #     now = datetime.now()
@@ -20,14 +17,11 @@ from invoice_rename_config import FieldSelector, fields
 from rename_function import run_main_ui_local
 
 def load_config_to_environ(config_file: str = "config.json") -> None:
-    """读 config.json；找不到就弹窗并退出。"""
+    """读 config.json；找不到就 用.env """
     if not os.path.isfile(config_file):
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showwarning("启动失败", f"找不到 {config_file}，请把配置文件放在程序同目录！")
-        root.destroy()
-        sys.exit(1)
-
+        print("使用.env文件加载环境变量")
+        return
+    print("使用config.json加载环境变量")
     """
     将 config.json 中的 MODEL_NAME / OPENAI_API_BASE / OPENAI_API_KEY
     加载到当前进程的 os.environ 中（仅本次运行有效，不会写系统注册表）。
