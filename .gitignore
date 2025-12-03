@@ -28,3 +28,4 @@ test/
 */dist/
 *.egg-info/
 */发票重命名.spec
+*/*.pdf
